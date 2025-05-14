@@ -81,7 +81,12 @@
       cursor: pointer;
     }
 
-    .reset-button:hover {
+    .reset-button:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    .reset-button:hover:not(:disabled) {
       background-color: #ff4d8f;
     }
   </style>
@@ -90,12 +95,12 @@
   <h1>花园梦工厂 · 三消挑战</h1>
   <div id="info">
     分数：<span id="score">0</span> /
-    🎯目标：150分 ｜ 剩余步数：<span id="moves">15</span>
+    🎯目标：150分 ｜ 剩余步数：<span id="moves">20</span>
   </div>
   <div id="game"></div>
 
   <!-- 重新排序按钮 -->
-  <button class="reset-button" onclick="reshuffle()">重新排序</button>
+  <button class="reset-button" id="shuffleBtn" onclick="reshuffle()">重新排序（2次机会）</button>
 
   <div class="overlay" id="resultOverlay">
     <div id="resultText">胜利！</div>
@@ -108,14 +113,16 @@
     const movesEl = document.getElementById("moves");
     const overlay = document.getElementById("resultOverlay");
     const resultText = document.getElementById("resultText");
+    const shuffleBtn = document.getElementById("shuffleBtn");
 
     const gridSize = 8;
-    const colors = ["🌸", "🌼", "🌷", "🌻", "💮", "🍓", "🍊", "🌿"];
+    const colors = ["🌸", "🌼", "🌷", "🌻", "💮", "🍓", "🌿"]; // ✅ 减少为7种
     const obstacles = [null, "🚫"];
     let tiles = [];
     let score = 0;
-    let moves = 15;
+    let moves = 20; // ✅ 步数调整为 20
     const targetScore = 150;
+    let shuffleTimes = 2; // ✅ 限制重新排序次数
 
     let firstTile = null;
     let secondTile = null;
@@ -252,21 +259,30 @@
 
     function restartGame() {
       score = 0;
-      moves = 15;
+      moves = 20;
+      shuffleTimes = 2;
       overlay.style.display = "none";
       scoreEl.innerText = score;
       movesEl.innerText = moves;
+      shuffleBtn.innerText = "重新排序（2次机会）";
+      shuffleBtn.disabled = false;
       createBoard();
       setTimeout(handleMatchCycle, 100);
     }
 
     function reshuffle() {
-      // 随机打乱图案
-      for (let i = 0; i < gridSize * gridSize; i++) {
-        tiles[i].innerText = randomObstacle() || randomColor();
+      if (shuffleTimes > 0) {
+        for (let i = 0; i < gridSize * gridSize; i++) {
+          tiles[i].innerText = randomObstacle() || randomColor();
+        }
+        shuffleTimes--;
+        moves--;
+        movesEl.innerText = moves;
+        shuffleBtn.innerText = `重新排序（${shuffleTimes}次机会）`;
+        if (shuffleTimes === 0) {
+          shuffleBtn.disabled = true;
+        }
       }
-      moves--; // 每次重新排序会消耗一步
-      movesEl.innerText = moves;
     }
 
     // 初始化
