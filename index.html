@@ -107,139 +107,73 @@
     <button onclick="restartGame()">再来一局</button>
   </div>
 
-  <script>
-    const game = document.getElementById("game");
-    const scoreEl = document.getElementById("score");
-    const movesEl = document.getElementById("moves");
-    const overlay = document.getElementById("resultOverlay");
-    const resultText = document.getElementById("resultText");
-    const shuffleBtn = document.getElementById("shuffleBtn");
+<script>
+  const game = document.getElementById("game");
+  const scoreEl = document.getElementById("score");
+  const movesEl = document.getElementById("moves");
+  const overlay = document.getElementById("resultOverlay");
+  const resultText = document.getElementById("resultText");
+  const shuffleBtn = document.getElementById("shuffleBtn");
 
-    const gridSize = 8;
-    const colors = ["🌸", "🌼", "🌷", "🌻", "💮", "🍓", "🌿"]; // ✅ 减少为7种
-    const obstacles = [null, "🚫"];
-    let tiles = [];
-    let score = 0;
-    let moves = 20; // ✅ 步数调整为 20
-    const targetScore = 150;
-    let shuffleTimes = 2; // ✅ 限制重新排序次数
+  const gridSize = 8;
+  const colors = ["🌸", "🌼", "🌷", "🌻", "💮", "🍓", "🌿"];
+  const obstacles = [null, "🚫"];
+  let tiles = [];
+  let score = 0;
+  let moves = 15;
+  const targetScore = 150;
+  let shuffleTimes = 2;
+  let firstTile = null;
+  let secondTile = null;
 
-    let firstTile = null;
-    let secondTile = null;
+  // --- 🎊 Confetti Variables ---
+  let confettiParticles = [];
+  let confettiCanvas, ctx;
 
-    function randomColor() {
-      return colors[Math.floor(Math.random() * colors.length)];
+  function createBoard() {
+    game.innerHTML = '';
+    tiles = [];
+    for (let i = 0; i < gridSize * gridSize; i++) {
+      const tile = document.createElement("div");
+      tile.className = "tile";
+      tile.setAttribute("id", i);
+      tile.innerText = randomObstacle() || randomColor();
+      game.appendChild(tile);
+      tile.addEventListener("click", handleTileClick);
+      tiles.push(tile);
+    }
+  }
+
+  function randomColor() {
+    return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  function randomObstacle() {
+    return Math.random() < 0.1 ? obstacles[1] : null;
+  }
+
+  function handleTileClick(e) {
+    const clickedTileId = parseInt(e.target.id);
+    if (firstTile === null) {
+      firstTile = clickedTileId;
+      return;
     }
 
-    function randomObstacle() {
-      return Math.random() < 0.1 ? obstacles[1] : null;
-    }
+    secondTile = clickedTileId;
 
-    function createBoard() {
-      game.innerHTML = '';
-      tiles = [];
-      for (let i = 0; i < gridSize * gridSize; i++) {
-        const tile = document.createElement("div");
-        tile.className = "tile";
-        tile.setAttribute("id", i);
-        tile.innerText = randomObstacle() || randomColor();
-        game.appendChild(tile);
-        tile.addEventListener("click", handleTileClick);
-        tiles.push(tile);
-      }
-    }
-
-    function handleTileClick(e) {
-      const clickedTileId = parseInt(e.target.id);
-
-      if (firstTile === null) {
-        firstTile = clickedTileId;
-        return;
-      }
-
-      secondTile = clickedTileId;
-
-      if (tiles[firstTile].innerText === "🚫" || tiles[secondTile].innerText === "🚫") {
-        firstTile = null;
-        secondTile = null;
-        return;
-      }
-
-      if (validSwap(firstTile, secondTile)) {
-        swapTiles(firstTile, secondTile);
-        if (!checkMatches()) {
-          swapTiles(firstTile, secondTile);
-        } else {
-          moves--;
-          movesEl.innerText = moves;
-          setTimeout(() => {
-            dropTiles();
-            handleMatchCycle();
-          }, 300);
-        }
-      }
-
+    if (tiles[firstTile].innerText === "🚫" || tiles[secondTile].innerText === "🚫") {
       firstTile = null;
       secondTile = null;
-      checkEndGame();
+      return;
     }
 
-    function validSwap(from, to) {
-      const diff = Math.abs(from - to);
-      return (diff === 1 || diff === 8) && tiles[to].innerText !== "🚫" && tiles[from].innerText !== "🚫";
-    }
-
-    function swapTiles(a, b) {
-      const tmp = tiles[a].innerText;
-      tiles[a].innerText = tiles[b].innerText;
-      tiles[b].innerText = tmp;
-    }
-
-    function checkMatches() {
-      let matched = false;
-
-      for (let i = 0; i < gridSize * gridSize; i++) {
-        if (i % gridSize > gridSize - 3) continue;
-        const match = [i, i + 1, i + 2];
-        const val = tiles[i].innerText;
-        if (match.every(idx => tiles[idx].innerText === val && val !== "" && val !== "🚫")) {
-          match.forEach(idx => tiles[idx].innerText = "");
-          score += 10;
-          matched = true;
-        }
-      }
-
-      for (let i = 0; i < gridSize * (gridSize - 2); i++) {
-        const match = [i, i + gridSize, i + gridSize * 2];
-        const val = tiles[i].innerText;
-        if (match.every(idx => tiles[idx].innerText === val && val !== "" && val !== "🚫")) {
-          match.forEach(idx => tiles[idx].innerText = "");
-          score += 10;
-          matched = true;
-        }
-      }
-
-      scoreEl.innerText = score;
-
-      return matched;
-    }
-
-    function dropTiles() {
-      for (let i = gridSize * gridSize - 1; i >= 0; i--) {
-        if (tiles[i].innerText === "" || tiles[i].innerText === "🚫") {
-          if (i - gridSize >= 0) {
-            tiles[i].innerText = tiles[i - gridSize].innerText;
-            tiles[i - gridSize].innerText = "";
-          } else {
-            tiles[i].innerText = randomObstacle() || randomColor();
-          }
-        }
-      }
-    }
-
-    function handleMatchCycle() {
-      let matched = checkMatches();
-      if (matched) {
+    if (validSwap(firstTile, secondTile)) {
+      swapTiles(firstTile, secondTile);
+      if (!checkMatches()) {
+        swapTiles(firstTile, secondTile);
+      } else {
+        moves--;
+        movesEl.innerText = moves;
         setTimeout(() => {
           dropTiles();
           handleMatchCycle();
@@ -247,46 +181,184 @@
       }
     }
 
-    function checkEndGame() {
-      if (score >= targetScore) {
-        resultText.innerText = "🎉 恭喜通关！";
-        overlay.style.display = "flex";
-      } else if (moves <= 0) {
-        resultText.innerText = "😢 游戏失败！";
-        overlay.style.display = "flex";
+    firstTile = null;
+    secondTile = null;
+    checkEndGame();
+  }
+
+  function validSwap(from, to) {
+    const diff = Math.abs(from - to);
+    return (diff === 1 || diff === 8) && tiles[to].innerText !== "🚫" && tiles[from].innerText !== "🚫";
+  }
+
+  function swapTiles(a, b) {
+    const tmp = tiles[a].innerText;
+    tiles[a].innerText = tiles[b].innerText;
+    tiles[b].innerText = tmp;
+  }
+
+  function checkMatches() {
+    let matched = false;
+
+    for (let i = 0; i < gridSize * gridSize; i++) {
+      if (i % gridSize > gridSize - 3) continue;
+      const match = [i, i + 1, i + 2];
+      const val = tiles[i].innerText;
+      if (match.every(idx => tiles[idx].innerText === val && val !== "" && val !== "🚫")) {
+        match.forEach(idx => tiles[idx].innerText = "");
+        score += 10;
+        matched = true;
       }
     }
 
-    function restartGame() {
-      score = 0;
-      moves = 20;
-      shuffleTimes = 2;
-      overlay.style.display = "none";
-      scoreEl.innerText = score;
-      movesEl.innerText = moves;
-      shuffleBtn.innerText = "重新排序（2次机会）";
-      shuffleBtn.disabled = false;
-      createBoard();
-      setTimeout(handleMatchCycle, 100);
+    for (let i = 0; i < gridSize * (gridSize - 2); i++) {
+      const match = [i, i + gridSize, i + gridSize * 2];
+      const val = tiles[i].innerText;
+      if (match.every(idx => tiles[idx].innerText === val && val !== "" && val !== "🚫")) {
+        match.forEach(idx => tiles[idx].innerText = "");
+        score += 10;
+        matched = true;
+      }
     }
 
-    function reshuffle() {
-      if (shuffleTimes > 0) {
-        for (let i = 0; i < gridSize * gridSize; i++) {
+    scoreEl.innerText = score;
+    return matched;
+  }
+
+  function dropTiles() {
+    for (let i = gridSize * gridSize - 1; i >= 0; i--) {
+      if (tiles[i].innerText === "" || tiles[i].innerText === "🚫") {
+        if (i - gridSize >= 0) {
+          tiles[i].innerText = tiles[i - gridSize].innerText;
+          tiles[i - gridSize].innerText = "";
+        } else {
           tiles[i].innerText = randomObstacle() || randomColor();
         }
-        shuffleTimes--;
-        moves--;
-        movesEl.innerText = moves;
-        shuffleBtn.innerText = `重新排序（${shuffleTimes}次机会）`;
-        if (shuffleTimes === 0) {
-          shuffleBtn.disabled = true;
-        }
       }
     }
+  }
 
-    // 初始化
+  function handleMatchCycle() {
+    let matched = checkMatches();
+    if (matched) {
+      setTimeout(() => {
+        dropTiles();
+        handleMatchCycle();
+      }, 300);
+    }
+  }
+
+  function checkEndGame() {
+    if (score >= targetScore) {
+      resultText.innerText = "🎉 恭喜通关！";
+      overlay.style.display = "flex";
+      startConfetti(); // 🎊 启动洒花动画
+    } else if (moves <= 0) {
+      resultText.innerText = "😢 游戏失败！";
+      overlay.style.display = "flex";
+    }
+  }
+
+  function restartGame() {
+    score = 0;
+    moves = 20;
+    shuffleTimes = 2;
+    overlay.style.display = "none";
+    scoreEl.innerText = score;
+    movesEl.innerText = moves;
+    shuffleBtn.innerText = "重新排序（2次机会）";
+    shuffleBtn.disabled = false;
+    stopConfetti(); // 🎊 停止动画
     createBoard();
-  </script>
+    setTimeout(handleMatchCycle, 100);
+  }
+
+  function reshuffle() {
+    if (shuffleTimes > 0) {
+      for (let i = 0; i < gridSize * gridSize; i++) {
+        tiles[i].innerText = randomObstacle() || randomColor();
+      }
+      shuffleTimes--;
+      moves--;
+      movesEl.innerText = moves;
+      shuffleBtn.innerText = `重新排序（${shuffleTimes}次机会）`;
+      if (shuffleTimes === 0) {
+        shuffleBtn.disabled = true;
+      }
+    }
+  }
+
+  // 🎊 Confetti Functions
+  function createConfettiCanvas() {
+    confettiCanvas = document.createElement("canvas");
+    confettiCanvas.style.position = "fixed";
+    confettiCanvas.style.top = "0";
+    confettiCanvas.style.left = "0";
+    confettiCanvas.style.width = "100%";
+    confettiCanvas.style.height = "100%";
+    confettiCanvas.style.pointerEvents = "none";
+    confettiCanvas.style.zIndex = "9999";
+    document.body.appendChild(confettiCanvas);
+    ctx = confettiCanvas.getContext("2d");
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+  }
+
+  function resizeCanvas() {
+    confettiCanvas.width = window.innerWidth;
+    confettiCanvas.height = window.innerHeight;
+  }
+
+  function startConfetti() {
+    createConfettiCanvas();
+    confettiParticles = [];
+    for (let i = 0; i < 150; i++) {
+      confettiParticles.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * -window.innerHeight,
+        r: Math.random() * 6 + 4,
+        d: Math.random() * 100,
+        color: `hsl(${Math.random() * 360}, 100%, 70%)`,
+        tilt: Math.random() * 10 - 10,
+        tiltAngle: 0
+      });
+    }
+    animateConfetti();
+  }
+
+  function animateConfetti() {
+    ctx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    confettiParticles.forEach(p => {
+      ctx.beginPath();
+      ctx.fillStyle = p.color;
+      ctx.ellipse(p.x, p.y, p.r, p.r / 2, Math.PI / 4, 0, 2 * Math.PI);
+      ctx.fill();
+    });
+
+    updateParticles();
+    confettiAnimationFrame = requestAnimationFrame(animateConfetti);
+  }
+
+  function updateParticles() {
+    confettiParticles.forEach(p => {
+      p.y += Math.cos(p.d) + 2;
+      p.x += Math.sin(p.d);
+      p.tiltAngle += 0.1;
+      p.tilt = Math.sin(p.tiltAngle) * 15;
+    });
+  }
+
+  function stopConfetti() {
+    cancelAnimationFrame(confettiAnimationFrame);
+    if (confettiCanvas) {
+      document.body.removeChild(confettiCanvas);
+      confettiCanvas = null;
+    }
+  }
+
+  // 初始化游戏
+  createBoard();
+</script>
+
 </body>
 </html>
