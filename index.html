@@ -1,64 +1,113 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>花园梦工厂 · 三消小游戏</title>
+  <meta charset="UTF-8">
+  <title>花园梦工厂 · 三消关卡</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       margin: 0;
-      font-family: 'Arial';
-      background: #fff5f8;
+      padding: 0;
+      background: #fff0f5;
+      font-family: "Arial", sans-serif;
       display: flex;
       flex-direction: column;
       align-items: center;
     }
+
     h1 {
-      color: #e76f8c;
+      color: #ff69b4;
+      margin: 1rem 0 0.5rem;
     }
+
+    #info {
+      font-size: 16px;
+      color: #444;
+      margin-bottom: 10px;
+    }
+
     #game {
       display: grid;
       grid-template-columns: repeat(8, 40px);
       grid-template-rows: repeat(8, 40px);
       gap: 2px;
     }
+
     .tile {
       width: 40px;
       height: 40px;
-      background-color: lightgray;
-      border-radius: 6px;
+      background-color: #eee;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 20px;
+      cursor: pointer;
       user-select: none;
     }
-    .score {
-      margin: 10px;
-      font-size: 18px;
-      color: #444;
+
+    .overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 24px;
+      color: white;
+      display: none;
+      z-index: 10;
+      flex-direction: column;
+    }
+
+    .overlay button {
+      margin-top: 1rem;
+      padding: 10px 20px;
+      background: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>花园梦工厂</h1>
-  <div class="score">得分：<span id="score">0</span></div>
+  <h1>花园梦工厂 · 三消挑战</h1>
+  <div id="info">
+    分数：<span id="score">0</span> /
+    🎯目标：100分 ｜ 剩余步数：<span id="moves">20</span>
+  </div>
   <div id="game"></div>
 
-  <script>
-    const colors = ["🌸", "🌼", "🌷", "🌻", "💮"];
-    const gridSize = 8;
-    let score = 0;
+  <div class="overlay" id="resultOverlay">
+    <div id="resultText">胜利！</div>
+    <button onclick="restartGame()">再来一局</button>
+  </div>
 
+  <script>
     const game = document.getElementById("game");
     const scoreEl = document.getElementById("score");
+    const movesEl = document.getElementById("moves");
+    const overlay = document.getElementById("resultOverlay");
+    const resultText = document.getElementById("resultText");
 
-    const tiles = [];
+    const gridSize = 8;
+    const colors = ["🌸", "🌼", "🌷", "🌻", "💮"];
+    let tiles = [];
+    let score = 0;
+    let moves = 20;
+    const targetScore = 100;
+
+    function randomColor() {
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
 
     function createBoard() {
+      game.innerHTML = '';
+      tiles = [];
       for (let i = 0; i < gridSize * gridSize; i++) {
         const tile = document.createElement("div");
-        tile.classList.add("tile");
+        tile.className = "tile";
         tile.setAttribute("draggable", true);
         tile.setAttribute("id", i);
         tile.innerText = randomColor();
@@ -67,79 +116,126 @@
       }
     }
 
-    function randomColor() {
-      return colors[Math.floor(Math.random() * colors.length)];
+    function validSwap(from, to) {
+      const diff = Math.abs(from - to);
+      return diff === 1 || diff === 8;
+    }
+
+    function swapTiles(a, b) {
+      const tmp = tiles[a].innerText;
+      tiles[a].innerText = tiles[b].innerText;
+      tiles[b].innerText = tmp;
     }
 
     function checkMatches() {
-      for (let i = 0; i < 64; i++) {
-        const rowEnd = i % gridSize >= gridSize - 2;
-        if (!rowEnd) {
-          const match = [i, i + 1, i + 2];
-          const color = tiles[i].innerText;
-          if (match.every(index => tiles[index].innerText === color)) {
-            match.forEach(index => (tiles[index].innerText = ""));
-            score += 10;
-          }
+      let matched = false;
+
+      // 横向匹配
+      for (let i = 0; i < gridSize * gridSize; i++) {
+        if (i % gridSize > gridSize - 3) continue;
+        const match = [i, i+1, i+2];
+        const val = tiles[i].innerText;
+        if (match.every(idx => tiles[idx].innerText === val && val !== "")) {
+          match.forEach(idx => tiles[idx].innerText = "");
+          score += 10;
+          matched = true;
         }
       }
+
+      // 纵向匹配
+      for (let i = 0; i < gridSize * (gridSize - 2); i++) {
+        const match = [i, i+gridSize, i+gridSize*2];
+        const val = tiles[i].innerText;
+        if (match.every(idx => tiles[idx].innerText === val && val !== "")) {
+          match.forEach(idx => tiles[idx].innerText = "");
+          score += 10;
+          matched = true;
+        }
+      }
+
       scoreEl.innerText = score;
+
+      return matched;
     }
 
     function dropTiles() {
-      for (let i = 63; i >= 8; i--) {
+      for (let i = gridSize * gridSize - 1; i >= 0; i--) {
         if (tiles[i].innerText === "") {
-          tiles[i].innerText = tiles[i - 8].innerText;
-          tiles[i - 8].innerText = "";
-        }
-      }
-      for (let i = 0; i < 8; i++) {
-        if (tiles[i].innerText === "") {
-          tiles[i].innerText = randomColor();
+          if (i - gridSize >= 0) {
+            tiles[i].innerText = tiles[i - gridSize].innerText;
+            tiles[i - gridSize].innerText = "";
+          } else {
+            tiles[i].innerText = randomColor();
+          }
         }
       }
     }
 
-    let draggedTile = null;
-    let replacedTile = null;
+    function handleMatchCycle() {
+      let matched = checkMatches();
+      if (matched) {
+        setTimeout(() => {
+          dropTiles();
+          handleMatchCycle();
+        }, 300);
+      }
+    }
 
-    tiles.forEach((tile, i) => {
-      tile.addEventListener("dragstart", (e) => {
-        draggedTile = e.target;
+    function checkEndGame() {
+      if (score >= targetScore) {
+        resultText.innerText = "🎉 恭喜通关！";
+        overlay.style.display = "flex";
+      } else if (moves <= 0) {
+        resultText.innerText = "😢 游戏失败！";
+        overlay.style.display = "flex";
+      }
+    }
+
+    function restartGame() {
+      score = 0;
+      moves = 20;
+      overlay.style.display = "none";
+      scoreEl.innerText = score;
+      movesEl.innerText = moves;
+      createBoard();
+      setUpDragEvents();
+      setTimeout(handleMatchCycle, 100);
+    }
+
+    function setUpDragEvents() {
+      tiles.forEach(tile => {
+        tile.addEventListener("dragstart", dragStart);
+        tile.addEventListener("dragover", e => e.preventDefault());
+        tile.addEventListener("drop", dragDrop);
       });
+    }
 
-      tile.addEventListener("dragover", (e) => {
-        e.preventDefault();
-      });
+    let draggedId = null;
 
-      tile.addEventListener("drop", (e) => {
-        replacedTile = e.target;
-        let draggedId = parseInt(draggedTile.id);
-        let replacedId = parseInt(replacedTile.id);
-        const validMoves = [
-          draggedId - 1,
-          draggedId + 1,
-          draggedId - 8,
-          draggedId + 8,
-        ];
-        if (validMoves.includes(replacedId)) {
-          let temp = draggedTile.innerText;
-          draggedTile.innerText = replacedTile.innerText;
-          replacedTile.innerText = temp;
-          checkMatches();
-          setTimeout(() => {
-            dropTiles();
-            checkMatches();
-          }, 200);
-        }
-      });
-    });
+    function dragStart(e) {
+      draggedId = parseInt(e.target.id);
+    }
 
+    function dragDrop(e) {
+      const targetId = parseInt(e.target.id);
+      if (!validSwap(draggedId, targetId)) return;
+
+      swapTiles(draggedId, targetId);
+      if (checkMatches()) {
+        moves--;
+        movesEl.innerText = moves;
+        handleMatchCycle();
+        checkEndGame();
+      } else {
+        // 不成立则回退
+        swapTiles(draggedId, targetId);
+      }
+    }
+
+    // 初始化
     createBoard();
-    setInterval(() => {
-      dropTiles();
-      checkMatches();
-    }, 1000);
+    setUpDragEvents();
+    setTimeout(handleMatchCycle, 100);
   </script>
 </body>
 </html>
