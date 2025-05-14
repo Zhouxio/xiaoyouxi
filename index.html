@@ -75,7 +75,7 @@
   <h1>花园梦工厂 · 三消挑战</h1>
   <div id="info">
     分数：<span id="score">0</span> /
-    🎯目标：100分 ｜ 剩余步数：<span id="moves">20</span>
+    🎯目标：150分 ｜ 剩余步数：<span id="moves">15</span>
   </div>
   <div id="game"></div>
 
@@ -92,17 +92,22 @@
     const resultText = document.getElementById("resultText");
 
     const gridSize = 8;
-    const colors = ["🌸", "🌼", "🌷", "🌻", "💮"];
+    const colors = ["🌸", "🌼", "🌷", "🌻", "💮", "🍓", "🍊", "🌿"]; // 增加更多的图案类型
+    const obstacles = [null, "🚫"]; // 设置障碍物
     let tiles = [];
     let score = 0;
-    let moves = 20;
-    const targetScore = 100;
+    let moves = 15; // 减少步数
+    const targetScore = 150;
 
     let firstTile = null;
     let secondTile = null;
 
     function randomColor() {
       return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    function randomObstacle() {
+      return Math.random() < 0.1 ? obstacles[1] : null; // 10% 概率生成障碍物
     }
 
     function createBoard() {
@@ -112,7 +117,7 @@
         const tile = document.createElement("div");
         tile.className = "tile";
         tile.setAttribute("id", i);
-        tile.innerText = randomColor();
+        tile.innerText = randomObstacle() || randomColor();
         game.appendChild(tile);
         tile.addEventListener("click", handleTileClick);
         tiles.push(tile);
@@ -169,7 +174,7 @@
         if (i % gridSize > gridSize - 3) continue;
         const match = [i, i+1, i+2];
         const val = tiles[i].innerText;
-        if (match.every(idx => tiles[idx].innerText === val && val !== "")) {
+        if (match.every(idx => tiles[idx].innerText === val && val !== "" && val !== "🚫")) {
           match.forEach(idx => tiles[idx].innerText = "");
           score += 10;
           matched = true;
@@ -180,7 +185,7 @@
       for (let i = 0; i < gridSize * (gridSize - 2); i++) {
         const match = [i, i+gridSize, i+gridSize*2];
         const val = tiles[i].innerText;
-        if (match.every(idx => tiles[idx].innerText === val && val !== "")) {
+        if (match.every(idx => tiles[idx].innerText === val && val !== "" && val !== "🚫")) {
           match.forEach(idx => tiles[idx].innerText = "");
           score += 10;
           matched = true;
@@ -194,12 +199,12 @@
 
     function dropTiles() {
       for (let i = gridSize * gridSize - 1; i >= 0; i--) {
-        if (tiles[i].innerText === "") {
+        if (tiles[i].innerText === "" || tiles[i].innerText === "🚫") {
           if (i - gridSize >= 0) {
             tiles[i].innerText = tiles[i - gridSize].innerText;
             tiles[i - gridSize].innerText = "";
           } else {
-            tiles[i].innerText = randomColor();
+            tiles[i].innerText = randomObstacle() || randomColor();
           }
         }
       }
@@ -227,7 +232,7 @@
 
     function restartGame() {
       score = 0;
-      moves = 20;
+      moves = 15;
       overlay.style.display = "none";
       scoreEl.innerText = score;
       movesEl.innerText = moves;
