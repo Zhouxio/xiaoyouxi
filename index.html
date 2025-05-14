@@ -92,11 +92,11 @@
     const resultText = document.getElementById("resultText");
 
     const gridSize = 8;
-    const colors = ["🌸", "🌼", "🌷", "🌻", "💮", "🍓", "🍊", "🌿"]; // 增加更多的图案类型
-    const obstacles = [null, "🚫"]; // 设置障碍物
+    const colors = ["🌸", "🌼", "🌷", "🌻", "💮", "🍓", "🍊", "🌿"];
+    const obstacles = [null, "🚫"]; // 障碍物（不可交换的图案）
     let tiles = [];
     let score = 0;
-    let moves = 15; // 减少步数
+    let moves = 15;
     const targetScore = 150;
 
     let firstTile = null;
@@ -134,6 +134,13 @@
 
       secondTile = clickedTileId;
 
+      // 确保交换的两个图案不是障碍物
+      if (tiles[firstTile].innerText === "🚫" || tiles[secondTile].innerText === "🚫") {
+        firstTile = null;
+        secondTile = null;
+        return; // 如果是障碍物，直接忽略
+      }
+
       if (validSwap(firstTile, secondTile)) {
         swapTiles(firstTile, secondTile);
         if (!checkMatches()) {
@@ -157,7 +164,7 @@
 
     function validSwap(from, to) {
       const diff = Math.abs(from - to);
-      return diff === 1 || diff === 8;  // 只允许横向或纵向相邻的格子交换
+      return (diff === 1 || diff === 8) && tiles[to].innerText !== "🚫" && tiles[from].innerText !== "🚫";
     }
 
     function swapTiles(a, b) {
