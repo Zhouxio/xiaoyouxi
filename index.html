@@ -69,6 +69,21 @@
       border-radius: 6px;
       cursor: pointer;
     }
+
+    .reset-button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #ff69b4;
+      color: white;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .reset-button:hover {
+      background-color: #ff4d8f;
+    }
   </style>
 </head>
 <body>
@@ -78,6 +93,7 @@
     🎯目标：150分 ｜ 剩余步数：<span id="moves">15</span>
   </div>
   <div id="game"></div>
+  <button class="reset-button" onclick="reshuffle()">重新排序</button>
 
   <div class="overlay" id="resultOverlay">
     <div id="resultText">胜利！</div>
@@ -93,7 +109,7 @@
 
     const gridSize = 8;
     const colors = ["🌸", "🌼", "🌷", "🌻", "💮", "🍓", "🍊", "🌿"];
-    const obstacles = [null, "🚫"]; // 障碍物（不可交换的图案）
+    const obstacles = [null, "🚫"];
     let tiles = [];
     let score = 0;
     let moves = 15;
@@ -107,7 +123,7 @@
     }
 
     function randomObstacle() {
-      return Math.random() < 0.1 ? obstacles[1] : null; // 10% 概率生成障碍物
+      return Math.random() < 0.1 ? obstacles[1] : null;
     }
 
     function createBoard() {
@@ -134,20 +150,17 @@
 
       secondTile = clickedTileId;
 
-      // 确保交换的两个图案不是障碍物
       if (tiles[firstTile].innerText === "🚫" || tiles[secondTile].innerText === "🚫") {
         firstTile = null;
         secondTile = null;
-        return; // 如果是障碍物，直接忽略
+        return;
       }
 
       if (validSwap(firstTile, secondTile)) {
         swapTiles(firstTile, secondTile);
         if (!checkMatches()) {
-          // 交换失败，恢复位置
           swapTiles(firstTile, secondTile);
         } else {
-          // 交换成功，消除图案
           moves--;
           movesEl.innerText = moves;
           setTimeout(() => {
@@ -176,10 +189,9 @@
     function checkMatches() {
       let matched = false;
 
-      // 横向匹配
       for (let i = 0; i < gridSize * gridSize; i++) {
         if (i % gridSize > gridSize - 3) continue;
-        const match = [i, i+1, i+2];
+        const match = [i, i + 1, i + 2];
         const val = tiles[i].innerText;
         if (match.every(idx => tiles[idx].innerText === val && val !== "" && val !== "🚫")) {
           match.forEach(idx => tiles[idx].innerText = "");
@@ -188,9 +200,8 @@
         }
       }
 
-      // 纵向匹配
       for (let i = 0; i < gridSize * (gridSize - 2); i++) {
-        const match = [i, i+gridSize, i+gridSize*2];
+        const match = [i, i + gridSize, i + gridSize * 2];
         const val = tiles[i].innerText;
         if (match.every(idx => tiles[idx].innerText === val && val !== "" && val !== "🚫")) {
           match.forEach(idx => tiles[idx].innerText = "");
@@ -245,6 +256,15 @@
       movesEl.innerText = moves;
       createBoard();
       setTimeout(handleMatchCycle, 100);
+    }
+
+    function reshuffle() {
+      // 随机打乱图案
+      for (let i = 0; i < gridSize * gridSize; i++) {
+        tiles[i].innerText = randomObstacle() || randomColor();
+      }
+      moves--; // 每次重新排序会消耗一步
+      movesEl.innerText = moves;
     }
 
     // 初始化
