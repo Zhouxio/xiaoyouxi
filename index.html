@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>花园梦工厂 · 三消关卡</title>
+  <title>花园梦工厂 · 三消挑战</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
@@ -98,6 +98,9 @@
     let moves = 20;
     const targetScore = 100;
 
+    let firstTile = null;
+    let secondTile = null;
+
     function randomColor() {
       return colors[Math.floor(Math.random() * colors.length)];
     }
@@ -108,17 +111,48 @@
       for (let i = 0; i < gridSize * gridSize; i++) {
         const tile = document.createElement("div");
         tile.className = "tile";
-        tile.setAttribute("draggable", true);
         tile.setAttribute("id", i);
         tile.innerText = randomColor();
         game.appendChild(tile);
+        tile.addEventListener("click", handleTileClick);
         tiles.push(tile);
       }
     }
 
+    function handleTileClick(e) {
+      const clickedTileId = parseInt(e.target.id);
+
+      if (firstTile === null) {
+        firstTile = clickedTileId;
+        return;
+      }
+
+      secondTile = clickedTileId;
+
+      if (validSwap(firstTile, secondTile)) {
+        swapTiles(firstTile, secondTile);
+        if (!checkMatches()) {
+          // 交换失败，恢复位置
+          swapTiles(firstTile, secondTile);
+        } else {
+          // 交换成功，消除图案
+          moves--;
+          movesEl.innerText = moves;
+          setTimeout(() => {
+            dropTiles();
+            handleMatchCycle();
+          }, 300);
+        }
+      }
+
+      firstTile = null;
+      secondTile = null;
+      checkEndGame();
+    }
+
     function validSwap(from, to) {
       const diff = Math.abs(from - to);
-      return diff === 1 || diff === 8;
+      return diff === 1 || diff === 8;  // 只允许横向或纵向相邻的格子交换
     }
 
     function swapTiles(a, b) {
@@ -198,44 +232,11 @@
       scoreEl.innerText = score;
       movesEl.innerText = moves;
       createBoard();
-      setUpDragEvents();
       setTimeout(handleMatchCycle, 100);
-    }
-
-    function setUpDragEvents() {
-      tiles.forEach(tile => {
-        tile.addEventListener("dragstart", dragStart);
-        tile.addEventListener("dragover", e => e.preventDefault());
-        tile.addEventListener("drop", dragDrop);
-      });
-    }
-
-    let draggedId = null;
-
-    function dragStart(e) {
-      draggedId = parseInt(e.target.id);
-    }
-
-    function dragDrop(e) {
-      const targetId = parseInt(e.target.id);
-      if (!validSwap(draggedId, targetId)) return;
-
-      swapTiles(draggedId, targetId);
-      if (checkMatches()) {
-        moves--;
-        movesEl.innerText = moves;
-        handleMatchCycle();
-        checkEndGame();
-      } else {
-        // 不成立则回退
-        swapTiles(draggedId, targetId);
-      }
     }
 
     // 初始化
     createBoard();
-    setUpDragEvents();
-    setTimeout(handleMatchCycle, 100);
   </script>
 </body>
 </html>
